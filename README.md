@@ -1,6 +1,6 @@
-# Tài liệu và các thuật toán
+# List of resources and algorithm
 
-Writeup : https://ken3k06.github.io/Blog/Cryptanalysis/Lattice-Methods
+My writeup: https://ken3k06.github.io/Blog/Cryptanalysis/Lattice-Methods
 
 
 ## Primal Attacks
@@ -9,7 +9,7 @@ Writeup : https://ken3k06.github.io/Blog/Cryptanalysis/Lattice-Methods
 - https://www.maths.ox.ac.uk/system/files/attachments/lattice-reduction-and-attacks.pdf
 
 
-## DSA - Schemes
+## DSA  Schemes
 
 ### CRYSTALS-DILITHIUM (2022)
 - [FIPS 204](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.204.pdf)
