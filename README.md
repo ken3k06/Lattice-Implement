@@ -1,6 +1,6 @@
 # List of resources and algorithm
 
-My writeup: https://ken3k06.github.io/Blog/Cryptanalysis/Lattice-Methods
+Basic Attacks : https://ken3k06.github.io/Blog/Cryptanalysis/Lattice-Methods
 
 
 ## Primal Attacks
