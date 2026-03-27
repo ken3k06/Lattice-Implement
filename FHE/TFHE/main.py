@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Union, overload, Iterable, Optional
 import numpy as np 
+from Crypto.Util.number import bytes_to_long, long_to_bytes 
 
 # một số exception
 
@@ -179,8 +180,8 @@ class Matrix:
 INT32_MIN = np.iinfo(np.int32).min
 INT32_MAX = np.iinfo(np.int32).max
 
-def uniform_sample_int32(size: int) -> Vector: 
-    return Vector(np.random.randint(INT32_MIN, INT32_MAX+1, size, dtype = np.int32).tolist(), q=0)
+def uniform_sample_int32(size: int , q: int) -> Vector: 
+    return Vector(np.random.randint(INT32_MIN, INT32_MAX+1, size, dtype = np.int32).tolist(), q=q)
 
 def gaussian_sample_int32(std: float, size: Optional[int]) -> Vector:
     if size is None:
@@ -207,35 +208,118 @@ class LWEParams:
     q : int 
     noise_bound: int 
 
+
+
 @dataclass
 class LWEPlaintext:
     message: int 
+
+
 @dataclass
 class LWECiphertext:
     params: LWEParams
     a: Vector 
     b: int 
     # Z^n_q x Z_qq
-@dataclass
 
+
+@dataclass
 class LWEKey: 
     params: LWEParams
     key: Vector 
 
+
 def generate_lwe_key(params: LWEParams) -> LWEKey: 
-    key = Vector(np.random.randint(low = 0 , high = 2, size = params.n, dtype = np.int32).tolist(), q=0)
+    key = Vector(np.random.randint(low = 0 , high = 2, size = params.n, dtype = np.int32).tolist(), q=params.q)
     return LWEKey(params, key)
 
 def lwe_encrypt(plaintext: LWEPlaintext, key: LWEKey) -> LWECiphertext: 
     params = key.params 
     e = gaussian_sample_int32_scalar(std = params.noise_bound) 
 
-    a = uniform_sample_int32(params.n)
+    a = uniform_sample_int32(params.n, q=params.q)
     b = (a*key.key + e + plaintext.message) % params.q 
     return LWECiphertext(params, a,b)
 
 
 def lwe_decrypt(ciphertext: LWECiphertext, key: LWEKey) -> LWEPlaintext:
-    pass 
+    params = key.params
+    a,b = ciphertext.a, ciphertext.b 
+    pt = (b - a*key.key) % params.q 
+    return LWEPlaintext(pt)
+
+
+def encode(m : int) -> int: 
+    return m*(2**29)
+def decode(m: int) -> int: 
+    return int(round(m/(2**29))) % 8
+
+def LWE_Encode(i: int) -> LWEPlaintext: 
+    return LWEPlaintext(encode(i))
+
+def LWE_Decode(pt: LWEPlaintext) -> int:
+    return decode(pt.message)
+
+
+
+
+param = LWEParams(n=1024, q = 2**32, noise_bound = 2**(-24)) 
+
+
+key = generate_lwe_key(param)
+plaintext = LWE_Encode(4) 
+ciphertext = lwe_encrypt(plaintext, key)
+dec_ciphertext = lwe_decrypt(ciphertext, key)
+decoded = LWE_Decode(dec_ciphertext)
+print(decoded) 
+assert decoded == 4, "Decryption failed"
+
+
+
+# test a msg
+from Crypto.Util.number import bytes_to_long, long_to_bytes 
+
+msg = b'CCTF{s0lV1n9_4_Syst3m_0f_L1n3Ar_3qUaTi0n5_0vEr_7H3_F!3lD_F(2)!}'
+
+# chuyen moi bytes -> octet
+
+def bytes_to_octet(msg: bytes) -> list[int]: 
+    digits = []
+    for b in msg: 
+        oct = format(b, '03o')
+        digits.extend(int(d) for d in oct) 
+    return digits 
+
+def octet_to_bytes(octets: list[int]) -> bytes: 
+    if len(octets) % 3 != 0:
+        raise ValueError("Invalid octet length")
+    out = bytearray() 
+    for i in range(0, len(octets), 3): 
+        d0,d1,d2 = octets[i], octets[i+1],octets[i+2]
+        if not (0<=d0 <8 and 0<=d1<8 and 0<=d2<8): 
+            raise ValueError("Invalid digits") 
+        value = d0*64+d1*8+d2
+        out.append(value) 
+    return bytes(out) 
+
+
+
+
+def lwe_encrypt_message(msg: bytes, key: LWEKey) -> list[LWECiphertext]: 
+    m = bytes_to_octet(msg) 
+    for i in range(len(m)): 
+        m[i] = LWE_Encode(m[i]).message
+    ciphertexts = [lwe_encrypt(LWEPlaintext(m[i]), key) for i in range(len(m))]
+    return ciphertexts
+
+def lwe_decrypt_message(ciphertexts: list[LWECiphertext], key: LWEKey) -> bytes: 
+    plaintexts = [lwe_decrypt(ct, key) for ct in ciphertexts]
+    octets = [LWE_Decode(pt) for pt in plaintexts]
+    return octet_to_bytes(octets)
+ct = lwe_encrypt_message(msg, key)
+decrypted_msg = lwe_decrypt_message(ct, key)
+print(decrypted_msg)
+# if __name__ == "__main__": 
+#     pass 
 
 
